@@ -1,0 +1,14 @@
+{
+  "clientId": "",
+  "clientSecret": "",
+  "port": 56230,
+  "redirect_uri": "http://localhost:56230",
+  "user_dump_sites": [],
+  "database": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "",
+    "password": "",
+    "database": "auths"
+  }
+}
