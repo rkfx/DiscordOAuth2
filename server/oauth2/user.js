@@ -3,6 +3,7 @@ const config = require("../../config.json");
 
 const DISCORD_OAUTH_TOKEN_API = "https://discord.com/api/oauth2/token";
 const DISCORD_ME_API = "https://discord.com/api/users/@me";
+const DISCORD_V10_API = "https://discord.com/api/v10";
 module.exports = class User {
     #mysql_conn;
     #has_registered;
@@ -37,6 +38,68 @@ module.exports = class User {
                 .catch((err) => {
                     reject("INVALID_DATA");
                 });
+        });
+    }
+
+    refresh() {
+        return new Promise(async (resolve, reject) => {
+            if (!this.refresh_token) {
+                reject("NO_REFRESH_TOKEN");
+                return;
+            }
+
+            fetch(DISCORD_OAUTH_TOKEN_API, {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                method: "POST",
+                body: new URLSearchParams({
+                    client_id: config.client_id,
+                    client_secret: config.client_secret,
+                    grant_type: "refresh_token",
+                    refresh_token: this.refresh_token,
+                    redirect_uri: config.redirect_uri,
+                }),
+            })
+                .then(res => res.json())
+                .then((res) => {
+                    if (res.error) {
+                        reject(res.error);
+                        return;
+                    }
+
+                    this.token_type = res.token_type;
+                    this.access_token = res.access_token;
+                    this.last_refresh_stamp = Date.now();
+                    this.expire_stamp = Date.now() + (res.expires_in * 1000);
+                    this.refresh_token = res.refresh_token;
+                    this.save().then(() => {
+                        resolve();
+                    }).catch((err) => {
+                        reject(err);
+                    });
+                })
+                .catch((err) => {
+                    reject("INVALID_DATA");
+                });
+        });
+    }
+
+    save() {
+        return new Promise((resolve, reject) => {
+            if (!this.did_certain) {
+                reject("NO_DID");
+                return;
+            }
+
+            this.#mysql_conn.query("UPDATE `auth_users` SET `token_type` = ?, `access_token` = ?, `last_refresh_stamp` = ?, `expire_stamp` = ?, `refresh_token` = ? WHERE `did` = ?", [this.token_type, this.access_token, this.last_refresh_stamp, this.expire_stamp, this.refresh_token, this.did_certain], (err, res) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve();
+            });
         });
     }
 
@@ -154,7 +217,9 @@ module.exports = class User {
                     this.refresh_token = result.refresh_token;
                     this.#has_registered = true;
                     this.#loaded = true;
+                    this.did_certain = result.did;
 
+                    console.log(`[discord.user] Loaded user ${this.did_certain} from database`);
                     resolve();
                 });
 
@@ -208,6 +273,9 @@ module.exports = class User {
 
                             this.#has_registered = true;
                             this.#loaded = true;
+                            this.did_certain = did;
+
+                            console.log(`[discord.user] Loaded user ${did} (${this.#code})`);
                             resolve();
                         });
                     }).catch((err) => {

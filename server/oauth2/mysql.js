@@ -1,5 +1,5 @@
 const mysql = require('mysql');
-const config = require('../../config/rconfig').config();
+const config = require('../rconfig').config();
 const path = require("path");
 const fs = require("fs");
 
@@ -20,7 +20,7 @@ module.exports =  function initialize_database() {
                 reject(err);
             }
 
-            console.log(`Connected as id ${connection.threadId}`);
+            console.log(`[api.database] Connected as id ${connection.threadId}`);
             create_tables(connection).then(() => {
                 resolve(connection);
             }).catch((err) => {
