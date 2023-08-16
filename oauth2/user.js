@@ -7,10 +7,12 @@ module.exports = class User {
     #mysql_conn;
     #has_registered;
     #loaded;
+    #code;
 
     constructor(mysql_conn, register = false, code = null) {
         this.#mysql_conn = mysql_conn;
         this.#has_registered = !register;
+        this.#code = code;
         this.#loaded = false;
     }
 
@@ -29,6 +31,7 @@ module.exports = class User {
             })
                 .then(res => res.json())
                 .then((user_det) => {
+                    this.did_certain = user_det.id;
                     resolve(user_det.id);
                 })
                 .catch((err) => {
@@ -50,14 +53,36 @@ module.exports = class User {
         });
     }
 
-    load(code) {
+    load() {
         return new Promise(async (resolve, reject) => {
             if (this.#has_registered) {
-                // This will load this account from the database
+                // NOTE: Code as UUID
+                if (!await this.account_exists(this.#code)) {
+                    reject("INVALID_CODE");
+                    return;
+                }
+
+                this.#mysql_conn.query("SELECT * FROM `auth_users` WHERE `did` = ?", [this.#code], (err, results, fields) => {
+                    if (err) {
+                        reject("ERROR_SQL_LOAD");
+                        return;
+                    }
+
+                    const result = results[0];
+                    this.access_token = result.access_token;
+                    this.token_type = result.token_type;
+                    this.expires_in = result.expires_in;
+                    this.refresh_token = result.refresh_token;
+                    this.#has_registered = true;
+                    this.#loaded = true;
+
+                    resolve();
+                });
+
                 return;
             }
 
-            if (!code) {
+            if (!this.#code) {
                 reject("INVALID_CODE");
                 return;
             }
@@ -67,7 +92,7 @@ module.exports = class User {
                 body: new URLSearchParams({
                     client_id: config.client_id,
                     client_secret: config.client_secret,
-                    code,
+                    code: this.#code,
                     grant_type: "authorization_code",
                     redirect_uri: config.redirect_uri,
                 }),

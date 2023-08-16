@@ -1,9 +1,16 @@
 {
   "clientId": "",
   "clientSecret": "",
+  "developer_mode": false,
   "port": 56230,
   "redirect_uri": "http://localhost:56230",
-  "user_dump_sites": [],
+  "guild": "0",
+  "token": "???",
+  "auth": "???",
+  "user_dump": {
+    "force_membership": false,
+    "servers": []
+  },
   "database": {
     "host": "localhost",
     "port": 3306,

@@ -38,6 +38,10 @@ function create_tables(connection) {
             return fs.readFileSync(path.join(__dirname, "../tables", file)).toString().replace(/(\r\n|\n|\r)/gm, " ");
         });
 
+        if (config.developer_mode) {
+            connection.query("DROP TABLE IF EXISTS `auth_users`", (err, results, fields) => {});
+        }
+
         let promises_waiting = 0;
         for (const table of tables) {
             promises_waiting++;
