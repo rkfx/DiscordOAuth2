@@ -1,4 +1,4 @@
-const config = require("../config.json");
+const config = require("../../config.json");
 
 module.exports = function setup_verify(client) {
     return new Promise(async (resolve, reject) => {

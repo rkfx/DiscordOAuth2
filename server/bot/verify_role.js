@@ -1,4 +1,4 @@
-const config = require("../config.json");
+const config = require("../../config.json");
 
 module.exports = function locate_verify_role(client) {
     return new Promise(async (resolve, reject) => {

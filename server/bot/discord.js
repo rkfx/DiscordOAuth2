@@ -1,5 +1,5 @@
 const { Client, Events, GatewayIntentBits } = require("discord.js");
-const config = require("../config.json");
+const config = require("../../config.json");
 
 module.exports = function create_discord() {
     return new Promise((resolve, reject) => {

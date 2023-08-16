@@ -1,6 +1,6 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const config = require('./config.json');
+const config = require('../config/rconfig').config();
 const path = require("path");
 const initialize_database = require('./oauth2/mysql.js');
 const User = require('./oauth2/user.js');
