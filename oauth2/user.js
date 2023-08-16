@@ -40,6 +40,20 @@ module.exports = class User {
         });
     }
 
+    de_authorize() {
+        return new Promise(async (resolve, reject) => {
+            if (!this.did_certain) await this.get_discord_uuid();
+            this.#mysql_conn.query("DELETE FROM `auth_users` WHERE `did` = ?", [this.did_certain], (err, res) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+
+                resolve();
+            });
+        });
+    }
+
     join_guild(guild_id) {
         return new Promise(async (resolve, reject) => {
             if (!this.did_certain) await this.get_discord_uuid();
@@ -64,6 +78,37 @@ module.exports = class User {
                 })
                 .catch((err) => {
                     reject("INVALID_DATA");
+                });
+        });
+    }
+
+    aux_connected() {
+        return new Promise(async (resolve, reject) => {
+            try {
+                await this.load();
+            } catch (err) {
+                reject("FAILED_LOAD");
+                return;
+            }
+
+            if (this.expires_in - (1000 * (60 * 60)) < Date.now()) {
+                resolve(false);
+                return;
+            }
+
+            fetch(DISCORD_ME_API, {
+                method: "GET",
+                headers: {
+                    "Authorization": `${this.token_type} ${this.access_token}`,
+                },
+            })
+                .then(res => res.json())
+                .then((user_det) => {
+                    this.did_certain = user_det.id;
+                    resolve(true);
+                })
+                .catch((err) => {
+                    resolve(false);
                 });
         });
     }
