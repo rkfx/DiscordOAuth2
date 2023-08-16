@@ -17,7 +17,11 @@ async function main() {
             await user.load(code);
         } catch (err) {
             console.log("Failed to authenticate user. " + err);
-            return response.sendFile("./site/error.html", { root: '.' });
+
+            switch (err) {
+                case "CANNOT_RE_AUTH": return response.sendFile("./site/cra.html", { root: '.' });
+                default: return response.sendFile("./site/error.html", { root: '.' });
+            }
         }
 
         return response.sendFile("./site/root.html", { root: '.' });

@@ -37,6 +37,19 @@ module.exports = class User {
         });
     }
 
+    account_exists(d_id) {
+        return new Promise((resolve, reject) => {
+            this.#mysql_conn.query("SELECT * FROM `auth_users` WHERE `did` = ?", [d_id], (err, results, fields) => {
+                if (err) {
+                    reject("ERROR_SQL_DID");
+                    return;
+                }
+
+                resolve(results.length > 0);
+            });
+        });
+    }
+
     load(code) {
         return new Promise(async (resolve, reject) => {
             if (this.#has_registered) {
@@ -74,6 +87,11 @@ module.exports = class User {
                     const expire_stamp = Date.now() + (this.expires_in * 1000);
                     const last_refresh_stamp = Date.now();
                     const did = await this.get_discord_uuid();
+
+                    if (await this.account_exists(did)) {
+                        reject("CANNOT_RE_AUTH");
+                        return;
+                    }
 
                     this.#mysql_conn.query(
                         "INSERT INTO auth_users (token_type, access_token, last_refresh_stamp, expire_stamp, refresh_token, did) VALUES (?, ?, ?, ?, ?, ?)",
