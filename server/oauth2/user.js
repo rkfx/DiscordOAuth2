@@ -4,6 +4,7 @@ const config = require("../../config.json");
 const DISCORD_OAUTH_TOKEN_API = "https://discord.com/api/oauth2/token";
 const DISCORD_ME_API = "https://discord.com/api/users/@me";
 const DISCORD_V10_API = "https://discord.com/api/v10";
+
 module.exports = class User {
     #mysql_conn;
     #has_registered;
