@@ -4,10 +4,18 @@ const config = require('./config.json');
 const path = require("path");
 const initialize_database = require('./oauth2/mysql.js');
 const User = require('./oauth2/user.js');
+const fs = require("fs");
 
 async function main() {
     const connection = await initialize_database();
     const app = express();
+
+    const root = fs.readFileSync(path.join(__dirname, "./site/root.html")).toString();
+
+    function load_page(page) {
+        const content = fs.readFileSync(path.join(__dirname, `./site/${page}.html`)).toString();
+        return root.replace("{% Content %}", content);
+    }
 
     app.get('/', async (request, response) => {
         const code = request.query.code;
@@ -19,12 +27,12 @@ async function main() {
             console.log("Failed to authenticate user. " + err);
 
             switch (err) {
-                case "CANNOT_RE_AUTH": return response.sendFile("./site/cra.html", { root: '.' });
-                default: return response.sendFile("./site/error.html", { root: '.' });
+                case "CANNOT_RE_AUTH": return response.send(load_page("cra"));
+                default: return response.send(load_page("error"));
             }
         }
 
-        return response.sendFile("./site/root.html", { root: '.' });
+        return response.send(load_page("success"));
     });
 
     app.listen(config.port, () => console.log(`App listening at http://localhost:${config.port}`));
