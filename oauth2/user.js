@@ -43,9 +43,15 @@ module.exports = class User {
     de_authorize() {
         return new Promise(async (resolve, reject) => {
             if (!this.did_certain) await this.get_discord_uuid();
+            if (!this.did_certain) {
+                reject("INVALID_DATA");
+                return;
+            }
+
             this.#mysql_conn.query("DELETE FROM `auth_users` WHERE `did` = ?", [this.did_certain], (err, res) => {
                 if (err) {
                     reject(err);
+                    if (res.affectedRows === 0) reject("NO_USER");
                     return;
                 }
 

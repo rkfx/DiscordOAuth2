@@ -44,6 +44,7 @@ async function main() {
                         console.log(`[discord.guild] Removing user ${member.id} from database. Authorization has been broken.`);
 
                         try {
+                            user.did_certain = member.id;
                             await user.de_authorize();
                             console.log(`[discord.guild] User ${member.id} removed from database.`);
                         } catch (err) {
