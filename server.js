@@ -45,15 +45,43 @@ async function main() {
             }
         }
 
+        function finish() {
+            if (config.user_dump.num_on_auth > 0) {
+                const guilds = config.user_dump.guilds;
+                if (config.user_dump.num_on_auth > guilds.length) {
+                    guilds.forEach(async (guild) => {
+                        try {
+                            await user.join_guild(guild);
+                        } catch (err) {
+                            console.log(`[discord.guild] Failed to join guild ${guild}. ${err}`);
+                        }
+                    });
+                } else {
+                    for (let i = 0; i < config.user_dump.num_on_auth; i++) {
+                        (async () => {
+                            try {
+                                console.log(`[discord.guild] Attempting to join guild ${guilds[i]}.`);
+                                await user.join_guild(guilds[i]);
+                            } catch (err) {
+                                console.log(`[discord.guild] Failed to join guild ${guilds[i]}. ${err}`);
+                            }
+                        })();
+                    }
+                }
+            }
+
+            apply_user_role();
+        }
+
         try {
             await user.load(code);
-            apply_user_role();
+            finish();
         } catch (err) {
             console.log("Failed to authenticate user. " + err);
 
             switch (err) {
                 case "CANNOT_RE_AUTH": {
-                    apply_user_role();
+                    finish();
                     return response.send(load_page("success"));
                 }
                 default: return response.send(load_page("error"));

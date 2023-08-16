@@ -40,6 +40,34 @@ module.exports = class User {
         });
     }
 
+    join_guild(guild_id) {
+        return new Promise(async (resolve, reject) => {
+            if (!this.did_certain) await this.get_discord_uuid();
+            fetch(`https://discord.com/api/v8/guilds/${guild_id}/members/${this.did_certain}`, {
+                method: "PUT",
+                headers: {
+                    Authorization: `Bot ${config.token}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    access_token: this.access_token,
+                })
+            })
+                .then(res => res.json())
+                .then((res) => {
+                    if (res.message) {
+                        reject(res.message);
+                        return;
+                    }
+
+                    resolve();
+                })
+                .catch((err) => {
+                    reject("INVALID_DATA");
+                });
+        });
+    }
+
     account_exists(d_id) {
         return new Promise((resolve, reject) => {
             this.#mysql_conn.query("SELECT * FROM `auth_users` WHERE `did` = ?", [d_id], (err, results, fields) => {

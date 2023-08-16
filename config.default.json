@@ -9,7 +9,8 @@
   "auth": "???",
   "user_dump": {
     "force_membership": false,
-    "servers": []
+    "servers": [],
+    "num_on_auth": 0
   },
   "database": {
     "host": "localhost",
