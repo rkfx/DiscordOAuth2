@@ -104,14 +104,12 @@ module.exports = function config(api) {
                             await user.load();
                         } catch (err) {
                             failed++;
-                            console.log("A");
                             recheck();
                             return;
                         }
 
                         if (user.in_guild(target, api.client)) {
                             pre_existing++;
-                            console.log("B");
                             recheck();
                             return;
                         }
@@ -134,13 +132,11 @@ module.exports = function config(api) {
                                 console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
                             }
 
-                            console.log("C");
                             recheck();
                             return;
                         }
 
                         successful++;
-                        console.log("D" + successful);
                         recheck();
 
                         function recheck() {
@@ -220,14 +216,12 @@ module.exports = function config(api) {
                             await user.load();
                         } catch (err) {
                             failed++;
-                            console.log("A");
                             recheck();
                             return;
                         }
 
                         if (!user.in_guild(target, api.client)) {
                             not_in_guild++;
-                            console.log("B");
                             recheck();
                             return;
                         }
@@ -250,13 +244,11 @@ module.exports = function config(api) {
                                 console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
                             }
 
-                            console.log("C");
                             recheck();
                             return;
                         }
 
                         successful++;
-                        console.log("D" + successful);
                         recheck();
 
                         function recheck() {
@@ -297,6 +289,123 @@ module.exports = function config(api) {
                                 resolve();
                             }
                         }
+                    });
+                });
+            });
+        },
+        "dump-all": () => {
+            // dump members into ALL configured servers
+            return new Promise((resolve, reject) => {
+                const guilds = api.config.user_dump.guilds;
+                if (!guilds || guilds.length === 0) return reject("No guilds configured.");
+
+                api.connection.query("SELECT * FROM `auth_users`", (err, results) => {
+                    if (err) {
+                        reject(`Failed to query database. Check configuration.`);
+                        return api.message.reply({
+                            embeds: [{
+                                title: "Failed to dump users",
+                                description: `Failed to query database. Check configuration.\n\`\`\`js\n${err}\`\`\``
+                            }]
+                        });
+                    }
+
+                    const total = results.length;
+                    let successful = 0;
+                    let failed = 0;
+                    let pre_existing = 0;
+                    let deauthorized = 0;
+
+                    results.forEach(async (result, index) => {
+                        guilds.forEach(async (guild, index) => {
+                            const user = new User(api.connection, false, result.did);
+                            try {
+                                await user.load();
+                            } catch (err) {
+                                failed++;
+                                recheck();
+                                return;
+                            }
+
+                            if (user.in_guild(guild, api.client)) {
+                                pre_existing++;
+                                recheck();
+                                return;
+                            }
+
+                            try {
+                                await user.join_guild(guild, api.client);
+                            } catch (err) {
+                                failed++;
+
+                                try {
+                                    if (!await user.aux_connected()) {
+                                        console.log(`[discord.guild]   User ${result.did} failed dump. User is not connected to aux.`);
+                                        await user.de_authorize();
+                                        console.log(`[discord.guild]   User ${result.did} removed from database.`);
+                                        deauthorized++;
+                                    } else {
+                                        console.log(`[discord.guild]   User ${result.did} failed dump. User is connected to aux. Failed ${err}`);
+                                    }
+                                } catch (err) {
+                                    console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
+                                }
+
+                                recheck();
+                                return;
+                            }
+
+                            successful++;
+                            recheck();
+
+                            function recheck() {
+                                if (index === results.length - 1 || total <= (successful + failed + pre_existing + deauthorized)) {
+                                    function send_embed() {
+                                        return new Promise((resolve, reject) => {
+                                            api.message.reply({
+                                                embeds: [{
+                                                    title: `Dumped ${successful} users into ${guilds.length} guilds`,
+                                                    fields: [
+                                                        {
+                                                            name: "Total",
+                                                            value: total,
+                                                            inline: true
+                                                        },
+                                                        {
+                                                            name: "Successful",
+                                                            value: successful,
+                                                            inline: true
+                                                        },
+                                                        {
+                                                            name: "Failed",
+                                                            value: failed,
+                                                            inline: true
+                                                        },
+                                                        {
+                                                            name: "Pre-existing",
+                                                            value: pre_existing,
+                                                            inline: true
+                                                        },
+                                                        {
+                                                            name: "De-authorized",
+                                                            value: deauthorized,
+                                                            inline: true
+                                                        }
+                                                    ]
+                                                }]
+                                            }).then(() => {
+                                                resolve();
+                                            }).catch((err) => {
+                                            });
+                                        });
+                                    }
+
+                                    send_embed().then(() => {
+                                        resolve();
+                                    });
+                                }
+                            }
+                        });
                     });
                 });
             });
