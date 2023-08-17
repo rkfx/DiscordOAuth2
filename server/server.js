@@ -10,24 +10,30 @@ const setup_verify = require('./bot/verification.js');
 const locate_verify_role = require('./bot/verify_role.js');
 const setup_jllock = require('./llock/jllock.js');
 const setup_tllock = require('./llock/tllock.js');
+const setup_info_bank = require('./reward/info.js');
+const setup_panel = require('./bot/panel/panel.js');
 
 async function main() {
     const connection = await initialize_database();
-    console.log(`[api.database] Database initialized.`);
+    console.log(`[api.database]    Database initialized.`);
     const app = express();
-    console.log(`[api.http(s)] Express initialized.`);
+    console.log(`[api.http(s)]     Express initialized.`);
     const root = fs.readFileSync(path.join(__dirname, "./site/root.html")).toString();
-    console.log(`[api.http(s)] Root page initialized.`);
+    console.log(`[api.http(s)]     Root page initialized.`);
     const client = await create_discord();
-    console.log(`[discord.client] Client initialized.`);
+    console.log(`[discord.client]  Client initialized.`);
     await setup_verify(client);
     console.log(`[discord.channel] Verification channel initialized.`);
     const verify_role = await locate_verify_role(client);
-    console.log(`[discord.role] Verification role initialized.`);
+    console.log(`[discord.role]    Verification role initialized.`);
     await setup_jllock(connection, client);
-    console.log(`[discord.guild] Join/leave lock initialized.`);
+    console.log(`[discord.guild]   Join/leave lock initialized.`);
     await setup_tllock(connection, client);
-    console.log(`[discord.guild] Token lock initialized.`);
+    console.log(`[discord.guild]   Token lock initialized.`);
+    await setup_info_bank(client);
+    console.log(`[discord.reward]  Info bank initialized.`);
+    await setup_panel(client, connection);
+    console.log(`[discord.panel]   Panel initialized.`);
 
     function load_page(page) {
         const content = fs.readFileSync(path.join(__dirname, `./site/${page}.html`)).toString();
@@ -83,7 +89,7 @@ async function main() {
             await user.load(code);
             finish();
         } catch (err) {
-            console.log("Failed to authenticate user. " + err);
+            console.log("[api.http(s)]     Failed to authenticate user. " + err);
 
             switch (err) {
                 case "CANNOT_RE_AUTH": {
@@ -97,8 +103,8 @@ async function main() {
         return response.send(load_page("success"));
     });
 
-    app.listen(config.port, () => console.log(`App listening at http://localhost:${config.port}`));
+    app.listen(config.port, () => console.log(`[api.http(s)]     App listening at http://localhost:${config.port}`));
 }
 
 main().then();
-console.log("Loose exit? Program thread unlocked [unexpected].");
+console.log("[nodejs]          Loose exit? Program thread unlocked [unexpected].");

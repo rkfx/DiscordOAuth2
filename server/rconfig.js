@@ -39,22 +39,22 @@ let loaded = false;
 
 exports.l_config = function l_config() {
     try {
-        console.log("[server.config] Loading config.json.")
+        console.log("[server.config]   Loading config.json.")
         if (fs.existsSync(path.join(process.cwd(), "config.json")) == false) {
-            console.log("[server.config] Creating config.json.");
+            console.log("[server.config]   Creating config.json.");
             fs.writeFileSync(path.join(process.cwd(), "config.json"), JSON.stringify(config_cache, null, 4));
-            console.log("[server.config] Created config.json. Please fill it out and restart the program.");
+            console.log("[server.config]   Created config.json. Please fill it out and restart the program.");
             process.exit(1);
         }
 
         const s_config = fs.readFileSync(path.join(process.cwd(), "config.json")).toString();
         config_cache = JSON.parse(s_config);
         loaded = true;
-        console.log("[server.config] Loaded config.json.");
+        console.log("[server.config]   Loaded config.json.");
 
         return config_cache;
     } catch (err) {
-        console.log("Failed to load config.json. " + err);
+        console.log("[server.config]   Failed to load config.json. " + err);
         process.exit(1);
     }
 }

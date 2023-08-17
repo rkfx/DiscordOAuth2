@@ -20,7 +20,7 @@ module.exports =  function initialize_database() {
                 reject(err);
             }
 
-            console.log(`[api.database] Connected as id ${connection.threadId}`);
+            console.log(`[api.database]    Connected as id ${connection.threadId}`);
             create_tables(connection).then(() => {
                 resolve(connection);
             }).catch((err) => {
