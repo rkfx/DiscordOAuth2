@@ -152,6 +152,14 @@ module.exports = class User {
         });
     }
 
+    in_guild(guild_id, client) {
+        const guild = client.guilds.cache.get(guild_id);
+        if (!guild) return false;
+        const member = guild.members.cache.get(this.did_certain);
+        if (!member) return false;
+        return true;
+    }
+
     aux_connected() {
         return new Promise(async (resolve, reject) => {
             try {

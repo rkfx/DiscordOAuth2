@@ -9,7 +9,7 @@ module.exports = function config(api) {
 
         resolve();
         setTimeout(() => {
-            console.log(`[api.power] Shutdown command requested by ${api.message.author.tag} (${api.message.author.id})`);
+            console.log(`[api.power]       Shutdown command requested by ${api.message.author.tag} (${api.message.author.id})`);
             process.exit(0);
         }, 1000);
     });

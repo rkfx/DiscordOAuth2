@@ -9,7 +9,7 @@ module.exports = function parse_command(command_string, api) {
         if (!prgms[args[1]]) return reject("Invalid command '" + args[1] + "', does not exist in programs. Valid commands: " + Object.keys(prgms).join(", "));
 
         try {
-            await prgms[args[1]](api);
+            await prgms[args[1]]({ ...api, args: args.slice(2) }),
             resolve();
         } catch (err) {
             reject(err);

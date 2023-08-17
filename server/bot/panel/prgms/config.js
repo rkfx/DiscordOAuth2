@@ -1,13 +1,14 @@
-module.exports = function config(api) {
-    return new Promise(async (resolve, reject) => {
-        const code = JSON.stringify(api.config, null, 4);
-        await api.message.reply({
-            embeds: [{
-                title: "Config",
-                description: "```json\n" + code + "```"
-            }]
-        });
+const subc = require("../subc.js");
 
-        resolve();
+module.exports = function config(api) {
+    return subc(api.args, {
+        "get": () => {
+            api.message.reply({
+                embeds: [{
+                    title: "Bot Configuration",
+                    description: "```json\n" + JSON.stringify(api.config, null, 4) + "```"
+                }]
+            });
+        }
     });
 }
