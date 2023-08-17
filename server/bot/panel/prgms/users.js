@@ -104,12 +104,14 @@ module.exports = function config(api) {
                             await user.load();
                         } catch (err) {
                             failed++;
+                            console.log("A");
                             recheck();
                             return;
                         }
 
                         if (user.in_guild(target, api.client)) {
                             pre_existing++;
+                            console.log("B");
                             recheck();
                             return;
                         }
@@ -132,11 +134,13 @@ module.exports = function config(api) {
                                 console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
                             }
 
+                            console.log("C");
                             recheck();
                             return;
                         }
 
                         successful++;
+                        console.log("D" + successful);
                         recheck();
 
                         function recheck() {
@@ -163,6 +167,122 @@ module.exports = function config(api) {
                                             {
                                                 name: "Pre-existing",
                                                 value: pre_existing,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "De-authorized",
+                                                value: deauthorized,
+                                                inline: true
+                                            }
+                                        ]
+                                    }]
+                                });
+
+                                resolve();
+                            }
+                        }
+                    });
+                });
+            });
+        },
+        "retract": () => {
+            return new Promise((resolve, reject) => {
+                if (api.args.length < 2) return api.message.reply("Invalid arguments. Missing guild index.");
+                let target_index = 0;
+                try {
+                    target_index = parseInt(api.args[1]);
+                } catch (err) {
+                    reject(`Failed to parse guild index. Please enter a number.`);
+                }
+                const target = api.config.user_dump.guilds[target_index];
+                if (!target) return api.message.reply("Invalid guild index. Guild does not exist.");
+
+                api.connection.query("SELECT * FROM `auth_users`", (err, results) => {
+                    if (err) {
+                        reject(`Failed to query database. Check configuration.`);
+                        return api.message.reply({
+                            embeds: [{
+                                title: "Failed to retract users",
+                                description: `Failed to query database. Check configuration.\n\`\`\`js\n${err}\`\`\``
+                            }]
+                        });
+                    }
+
+                    const total = results.length;
+                    let successful = 0;
+                    let failed = 0;
+                    let not_in_guild = 0;
+                    let deauthorized = 0;
+
+                    results.forEach(async (result, index) => {
+                        const user = new User(api.connection, false, result.did);
+                        try {
+                            await user.load();
+                        } catch (err) {
+                            failed++;
+                            console.log("A");
+                            recheck();
+                            return;
+                        }
+
+                        if (!user.in_guild(target, api.client)) {
+                            not_in_guild++;
+                            console.log("B");
+                            recheck();
+                            return;
+                        }
+
+                        try {
+                            await user.leave_guild(target, api.client);
+                        } catch (err) {
+                            failed++;
+
+                            try {
+                                if (!await user.aux_connected()) {
+                                    console.log(`[discord.guild]   User ${result.did} failed retract. User is not connected to aux.`);
+                                    await user.de_authorize();
+                                    console.log(`[discord.guild]   User ${result.did} removed from database.`);
+                                    deauthorized++;
+                                } else {
+                                    console.log(`[discord.guild]   User ${result.did} failed retract. User is connected to aux. Failed ${err}`);
+                                }
+                            } catch (err) {
+                                console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
+                            }
+
+                            console.log("C");
+                            recheck();
+                            return;
+                        }
+
+                        successful++;
+                        console.log("D" + successful);
+                        recheck();
+
+                        function recheck() {
+                            if (index === results.length - 1) {
+                                api.message.reply({
+                                    embeds: [{
+                                        title: `Retracted ${successful} users from ${target}`,
+                                        fields: [
+                                            {
+                                                name: "Total",
+                                                value: total,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Successful",
+                                                value: successful,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Failed",
+                                                value: failed,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Not in guild",
+                                                value: not_in_guild,
                                                 inline: true
                                             },
                                             {

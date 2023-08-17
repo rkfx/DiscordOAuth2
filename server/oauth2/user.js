@@ -170,6 +170,7 @@ module.exports = class User {
                 .then(async (res) => {
                     if (res.message) {
                         if (res.retry_after) {
+                            console.log(`[discord.user] Rate limited, waiting ${res.retry_after}ms`);
                             await this.wait(res.retry_after);
                             this.join_guild(guild_id).then(() => {
                                 resolve();
@@ -188,6 +189,34 @@ module.exports = class User {
                 .catch((err) => {
                     reject("INVALID_DATA");
                 });
+        });
+    }
+
+    leave_guild(guild_id, client) {
+        return new Promise(async (resolve, reject) => {
+            if (!this.did_certain) await this.get_discord_uuid();
+            if (!this.in_guild(guild_id, client)) {
+                reject("NOT_IN_GUILD");
+                return;
+            }
+
+            const guild = client.guilds.cache.get(guild_id);
+            if (!guild) {
+                reject("INVALID_GUILD");
+                return;
+            }
+
+            const member = guild.members.cache.get(this.did_certain);
+            if (!member) {
+                reject("INVALID_MEMBER");
+                return;
+            }
+
+            member.kick().then(() => {
+                resolve();
+            }).catch((err) => {
+                reject(err);
+            });
         });
     }
 
