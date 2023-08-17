@@ -42,6 +42,29 @@ module.exports = class User {
         });
     }
 
+    get_profile() {
+        return new Promise((resolve, reject) => {
+            if (!this.access_token || !this.token_type) {
+                reject("NO_ACCESS_TOKEN");
+                return;
+            }
+
+            fetch(DISCORD_ME_API, {
+                method: "GET",
+                headers: {
+                    "Authorization": `${this.token_type} ${this.access_token}`,
+                },
+            })
+                .then(res => res.json())
+                .then((user_det) => {
+                    resolve(user_det);
+                })
+                .catch((err) => {
+                    reject("INVALID_DATA");
+                });
+        });
+    }
+
     refresh() {
         return new Promise(async (resolve, reject) => {
             if (!this.refresh_token) {
@@ -124,6 +147,12 @@ module.exports = class User {
         });
     }
 
+    wait(ms) {
+        return new Promise((resolve) => {
+            setTimeout(resolve, ms);
+        });
+    }
+
     join_guild(guild_id) {
         return new Promise(async (resolve, reject) => {
             if (!this.did_certain) await this.get_discord_uuid();
@@ -138,8 +167,18 @@ module.exports = class User {
                 })
             })
                 .then(res => res.json())
-                .then((res) => {
+                .then(async (res) => {
                     if (res.message) {
+                        if (res.retry_after) {
+                            await this.wait(res.retry_after);
+                            this.join_guild(guild_id).then(() => {
+                                resolve();
+                            }).catch((err) => {
+                                reject(err);
+                            });
+                            return;
+                        }
+
                         reject(res.message);
                         return;
                     }
@@ -169,7 +208,7 @@ module.exports = class User {
                 return;
             }
 
-            if (this.expires_in - (1000 * (60 * 60)) < Date.now()) {
+            if (this.expire_stamp < Date.now()) {
                 resolve(false);
                 return;
             }
@@ -182,6 +221,11 @@ module.exports = class User {
             })
                 .then(res => res.json())
                 .then((user_det) => {
+                    if (user_det.message) {
+                        resolve(false);
+                        return;
+                    }
+
                     this.did_certain = user_det.id;
                     resolve(true);
                 })

@@ -24,6 +24,51 @@ module.exports = function config(api) {
                 }]
             });
         },
+        "stat": () => {
+            return new Promise((resolve, reject) => {
+                api.connection.query("SELECT COUNT(*) AS total_records FROM `auth_users`", (err, rows) => {
+                    if (err) return reject(`Failed to get record information. ${err}`);
+
+                    api.connection.query("SELECT * FROM `auth_users` ORDER BY `last_refresh_stamp` DESC LIMIT 1", async (err, rows2) => {
+                        const user = new User(api.connection, false, rows2[0].did);
+                        let last_auth_str = "";
+
+                        try {
+                            await user.load();
+                            const profile = await user.get_profile();
+                            last_auth_str = `${profile.username}#${profile.discriminator} on ${new Date(rows2[0].last_refresh_stamp * 1000).toUTCString()}`;
+                        } catch (err) {
+                            last_auth_str = "Unknown [Driver Error] - " + err;
+                        }
+
+                        api.message.reply({
+                            embeds: [{
+                                title: "OAuth2 User Statistics",
+                                description: "Current information regarding the OAuth2 user database.",
+                                fields: [
+                                    {
+                                        name: "Total Users",
+                                        value: rows[0].total_records,
+                                        inline: true
+                                    },
+                                    {
+                                        name: "Last Authorized",
+                                        value: last_auth_str,
+                                        inline: true
+                                    }
+                                ]
+                            }]
+                        })
+                            .then(() => {
+                                resolve();
+                            })
+                            .catch((err) => {
+                                reject(`Failed to send message. ${err}`);
+                            });
+                    });
+                });
+            });
+        },
         "dump": () => {
             return new Promise((resolve, reject) => {
                 if (api.args.length < 2) return api.message.reply("Invalid arguments. Missing guild index.");
@@ -41,6 +86,7 @@ module.exports = function config(api) {
                     let successful = 0;
                     let failed = 0;
                     let pre_existing = 0;
+                    let deauthorized = 0;
 
                     if (err) {
                         reject(`Failed to query database. Check configuration.`);
@@ -58,52 +104,78 @@ module.exports = function config(api) {
                             await user.load();
                         } catch (err) {
                             failed++;
+                            recheck();
                             return;
                         }
 
-                        if (user.in_guild(target, api.client)) return pre_existing++;
+                        if (user.in_guild(target, api.client)) {
+                            pre_existing++;
+                            recheck();
+                            return;
+                        }
 
                         try {
-                            console.log("A");
                             await user.join_guild(target);
-                            console.log("B");
                         } catch (err) {
                             failed++;
+
+                            try {
+                                if (!await user.aux_connected()) {
+                                    console.log(`[discord.guild]   User ${result.did} failed dump. User is not connected to aux.`);
+                                    await user.de_authorize();
+                                    console.log(`[discord.guild]   User ${result.did} removed from database.`);
+                                    deauthorized++;
+                                } else {
+                                    console.log(`[discord.guild]   User ${result.did} failed dump. User is connected to aux. Failed ${err}`);
+                                }
+                            } catch (err) {
+                                console.log(`[discord.guild]   User ${result.did} failed to be removed from database. ${err}`);
+                            }
+
+                            recheck();
                             return;
                         }
 
                         successful++;
+                        recheck();
 
-                        if (index === total - 1) {
-                            api.message.reply({
-                                embeds: [{
-                                    title: `Dumped ${successful} users into ${target}`,
-                                    fields: [
-                                        {
-                                            name: "Total",
-                                            value: total,
-                                            inline: true
-                                        },
-                                        {
-                                            name: "Successful",
-                                            value: successful,
-                                            inline: true
-                                        },
-                                        {
-                                            name: "Failed",
-                                            value: failed,
-                                            inline: true
-                                        },
-                                        {
-                                            name: "Pre-existing",
-                                            value: pre_existing,
-                                            inline: true
-                                        }
-                                    ]
-                                }]
-                            });
+                        function recheck() {
+                            if (index === results.length - 1) {
+                                api.message.reply({
+                                    embeds: [{
+                                        title: `Dumped ${successful} users into ${target}`,
+                                        fields: [
+                                            {
+                                                name: "Total",
+                                                value: total,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Successful",
+                                                value: successful,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Failed",
+                                                value: failed,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "Pre-existing",
+                                                value: pre_existing,
+                                                inline: true
+                                            },
+                                            {
+                                                name: "De-authorized",
+                                                value: deauthorized,
+                                                inline: true
+                                            }
+                                        ]
+                                    }]
+                                });
 
-                            resolve();
+                                resolve();
+                            }
                         }
                     });
                 });
